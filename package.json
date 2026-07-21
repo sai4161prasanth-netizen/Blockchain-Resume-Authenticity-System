@@ -1,0 +1,12 @@
+{
+  "name": "blockchain-resume-system",
+  "version": "1.0.0",
+  "description": "Full-stack Blockchain Resume Authenticity System",
+  "scripts": {
+    "install:all": "cd blockchain && npm install && cd ../server && npm install && cd ../client && npm install",
+    "dev:blockchain": "cd blockchain && npx hardhat node",
+    "dev:server": "cd server && npm start",
+    "dev:client": "cd client && npm run dev",
+    "deploy:contract": "cd blockchain && npx hardhat run scripts/deploy.js --network localhost"
+  }
+}
