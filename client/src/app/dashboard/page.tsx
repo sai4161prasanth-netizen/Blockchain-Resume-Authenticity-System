@@ -3,12 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useBlockchain } from "@/context/BlockchainContext";
 import { useRouter } from "next/navigation";
-import { 
-  PlusCircle, 
-  Search, 
-  FileText, 
-  ShieldCheck, 
-  LogOut, 
+import {
+  PlusCircle,
+  Search,
+  FileText,
+  ShieldCheck,
+  LogOut,
   Wallet,
   CheckCircle2,
   Clock,
@@ -83,9 +83,9 @@ export default function Dashboard() {
             <FileText className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          
+
           {user?.role === 'institution' && (
-            <button type="button" 
+            <button type="button"
               onClick={() => router.push('/dashboard/upload')}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all"
             >
@@ -104,7 +104,7 @@ export default function Dashboard() {
             </button>
           )}
 
-          <button type="button" 
+          <button type="button"
             onClick={() => router.push('/verify')}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all"
           >
@@ -113,7 +113,7 @@ export default function Dashboard() {
           </button>
         </nav>
 
-        <button type="button" 
+        <button type="button"
           onClick={logout}
           className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all mt-auto"
         >
@@ -131,11 +131,11 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-4">
-            <button type="button" 
+            <button type="button"
               onClick={connectWallet}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all ${
-                account 
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                account
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                 : 'bg-blue-600 hover:bg-blue-500 text-white'
               }`}
             >
@@ -175,7 +175,7 @@ export default function Dashboard() {
           <div className="p-6 border-b border-slate-800 flex justify-between items-center">
             <h3 className="text-xl font-semibold">Your Certificates</h3>
             {user?.role === 'student' && (
-              <button type="button" 
+              <button type="button"
                 onClick={() => router.push(`/resume/${user?._id}`)}
                 className="text-sm text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
               >
@@ -183,7 +183,7 @@ export default function Dashboard() {
               </button>
             )}
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
@@ -219,7 +219,7 @@ export default function Dashboard() {
                     </td>
                     <td className="px-6 py-4">
                       {cert.blockchainTx && BLOCK_EXPLORER_URL ? (
-                        <a 
+                        <a
                           href={`${BLOCK_EXPLORER_URL.replace(/\/$/, '')}/tx/${cert.blockchainTx}`}
                           target="_blank"
                           rel="noopener noreferrer"

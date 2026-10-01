@@ -1,10 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { 
-  ShieldCheck, 
-  FileText, 
-  CheckCircle2, 
+import {
+  ShieldCheck,
+  FileText,
+  CheckCircle2,
   UserCircle,
   Building2,
   Calendar,
@@ -59,10 +59,10 @@ export default function ResumePage() {
 
   const handleDownload = (fileUrl: string, title: string) => {
     if (!fileUrl) return;
-    
+
     // Construct the full URL if it's a relative path
-    const fullUrl = fileUrl.startsWith('http') 
-      ? fileUrl 
+    const fullUrl = fileUrl.startsWith('http')
+      ? fileUrl
       : `${API_URL}${fileUrl}`;
 
     // Create a temporary anchor element
@@ -88,15 +88,15 @@ export default function ResumePage() {
             </div>
             <h1 className="text-2xl font-bold mb-2">{student?.name || "Verified Student"}</h1>
             <p className="text-slate-400 mb-6">Public credential profile</p>
-            
+
             <div className="w-full pt-6 border-t border-slate-800">
               <div className="bg-white p-4 rounded-2xl inline-block mb-4">
                 <QRCodeSVG value={typeof window !== 'undefined' ? window.location.href : ''} size={150} />
               </div>
               <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-4">Scan to Verify Resume</p>
-              
+
               <div className="flex gap-2 w-full">
-                <button type="button" 
+                <button type="button"
                   onClick={copyLink}
                   className="flex-1 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 py-2 rounded-xl text-sm transition-all"
                 >
@@ -140,7 +140,7 @@ export default function ResumePage() {
                   <div className="absolute top-0 right-0 p-4">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 opacity-50 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-xl font-bold mb-1 group-hover:text-blue-400 transition-colors">{cert.title}</h3>
@@ -157,7 +157,7 @@ export default function ResumePage() {
                           <span className="text-xs font-mono text-slate-400 break-all">
                             {cert.certHash.slice(0, 32)}...
                           </span>
-                          <button type="button" 
+                          <button type="button"
                             onClick={() => copyHash(cert.certHash)}
                             className="p-1.5 rounded-md hover:bg-slate-700 text-slate-500 hover:text-blue-400 transition-all flex items-center gap-1"
                             title="Copy Full Hash"
@@ -171,7 +171,7 @@ export default function ResumePage() {
                           </button>
                         </div>
                       </div>
-                      {cert.fileUrl && <button type="button" 
+                      {cert.fileUrl && <button type="button"
                         onClick={() => cert.fileUrl && handleDownload(cert.fileUrl, cert.title)}
                         className="p-2 text-slate-500 hover:text-blue-400 transition-all"
                         title="Download Certificate"
@@ -189,7 +189,7 @@ export default function ResumePage() {
               )}
             </div>
           </div>
-          
+
           <footer className="text-center text-slate-600 text-sm py-4">
             <p>© 2026 Blockchain Resume Authenticity System. All rights reserved.</p>
             <p className="mt-1">Credential hashes anchored on Ethereum</p>

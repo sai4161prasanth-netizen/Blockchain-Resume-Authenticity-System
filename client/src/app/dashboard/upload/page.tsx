@@ -4,13 +4,13 @@ import { useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useBlockchain } from "@/context/BlockchainContext";
 import { useRouter } from "next/navigation";
-import { 
-  PlusCircle, 
-  ArrowLeft, 
-  FileUp, 
-  CheckCircle2, 
-  Loader2, 
-  AlertCircle 
+import {
+  PlusCircle,
+  ArrowLeft,
+  FileUp,
+  CheckCircle2,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import axios from "axios";
 import type { AiScreening, CertificateRecord } from "@/types/certificate";
@@ -25,7 +25,7 @@ export default function UploadPage() {
   const { user } = useAuth();
   const { account, connectWallet, issueCertificateOnChain } = useBlockchain();
   const router = useRouter();
-  
+
   const [formData, setFormData] = useState({
     studentEmail: "",
     title: "",
@@ -34,7 +34,7 @@ export default function UploadPage() {
     externalUrl: "",
     externalId: ""
   });
-  
+
   const [file, setFile] = useState<File | null>(null);
   const [aiConsent, setAiConsent] = useState(false);
   const [aiScreening, setAiScreening] = useState<AiScreening | null>(null);
@@ -126,7 +126,7 @@ export default function UploadPage() {
 
       // 1. Upload to Backend
       const response = await axios.post<UploadResponse>(`${API_URL}/api/certs/upload`, data, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${user?.token}`,
           "Content-Type": "multipart/form-data"
         }
@@ -175,7 +175,7 @@ export default function UploadPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-8">
       <div className="max-w-2xl mx-auto">
-        <button type="button" 
+        <button type="button"
           onClick={() => router.back()}
           className="flex items-center gap-2 text-slate-400 hover:text-white transition-all mb-8"
         >
@@ -229,7 +229,7 @@ export default function UploadPage() {
                 <p className="font-bold">Wallet Not Connected</p>
                 <p>You must connect your MetaMask wallet to record certificates on the blockchain.</p>
               </div>
-              <button 
+              <button
                 type="button"
                 onClick={connectWallet}
                 className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors"
@@ -291,7 +291,7 @@ export default function UploadPage() {
                       accept="application/pdf,image/png,image/jpeg"
                       onChange={(e) => setFile(e.target.files?.[0] || null)}
                     />
-                    <label 
+                    <label
                       htmlFor="cert-file"
                       className="w-full flex flex-col items-center justify-center gap-3 py-10 border-2 border-dashed border-slate-700 rounded-2xl group-hover:border-blue-500 transition-all cursor-pointer bg-slate-800/50"
                     >
