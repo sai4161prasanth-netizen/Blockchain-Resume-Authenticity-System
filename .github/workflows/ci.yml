@@ -46,4 +46,4 @@ jobs:
         run: |
           npm ci --prefix blockchain
           npm audit --prefix blockchain
-          npm run build --prefix blockchain
+          npm run compile --prefix blockchain

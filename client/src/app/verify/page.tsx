@@ -61,9 +61,12 @@ export default function VerifyPage() {
         const [isValid, studentName, institution, issueDate, issuedBy] = onChainData;
 
         if (isValid) {
+          const institutionMatches = certificate.institution.trim().toLowerCase() === institution.trim().toLowerCase();
+          const walletMatches = certificate.issuedBy?.walletAddress?.toLowerCase() === issuedBy.toLowerCase();
           setResult({
             ...certificate,
-            onChainVerified: true,
+            onChainVerified: institutionMatches && walletMatches,
+            chainMismatch: !institutionMatches || !walletMatches,
             blockchainDetails: {
               studentName,
               institution,
@@ -157,10 +160,10 @@ export default function VerifyPage() {
               {result.onChainVerified ? <CheckCircle2 className="w-10 h-10 text-emerald-500" /> : <AlertCircle className="w-10 h-10 text-amber-500" />}
               <div>
                 <h3 className={`font-black text-3xl ${result.onChainVerified ? "text-emerald-500" : "text-amber-500"}`}>
-                  {result.onChainVerified ? "VERIFIED ON-CHAIN" : "NOT VERIFIED ON-CHAIN"}
+                  {result.onChainVerified ? "VERIFIED ON-CHAIN" : result.chainMismatch ? "CHAIN RECORD MISMATCH" : "NOT VERIFIED ON-CHAIN"}
                 </h3>
                 <p className="text-slate-400">
-                  {result.onChainVerified ? "Credential hash matches an active blockchain record." : "A database record exists, but the blockchain did not confirm it."}
+                  {result.onChainVerified ? "Hash, institution, and issuer wallet match the active blockchain record." : result.chainMismatch ? "The hash exists on-chain, but its institution or issuer wallet differs from the verified database record." : "A database record exists, but the blockchain did not confirm it."}
                 </p>
               </div>
             </div>
@@ -172,7 +175,7 @@ export default function VerifyPage() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-amber-400 font-bold bg-amber-500/10 px-4 py-2 rounded-full border border-amber-500/20">
-                  <AlertCircle className="w-5 h-5" /> Off-Chain Only
+                  <AlertCircle className="w-5 h-5" /> {result.chainMismatch ? "Mismatch" : "Off-Chain Only"}
                 </div>
               )}
             </div>
@@ -205,6 +208,7 @@ export default function VerifyPage() {
                     <div>
                       <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Institution</p>
                       <p className="text-lg font-medium">{result.institution}</p>
+                      {result.chainMismatch && result.blockchainDetails && <p className="text-xs text-amber-300 mt-1">On-chain institution: {result.blockchainDetails.institution}</p>}
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -225,6 +229,7 @@ export default function VerifyPage() {
                       <p className="text-sm font-mono text-slate-300">
                         {result.issuedBy?.walletAddress || result.blockchainDetails?.issuedBy || 'N/A'}
                       </p>
+                      {result.chainMismatch && result.blockchainDetails && <p className="text-xs font-mono text-amber-300 mt-1 break-all">On-chain wallet: {result.blockchainDetails.issuedBy}</p>}
                     </div>
                   </div>
                 </div>

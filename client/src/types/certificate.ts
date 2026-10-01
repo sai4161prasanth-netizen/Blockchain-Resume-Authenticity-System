@@ -37,6 +37,7 @@ export type BlockchainCertificateDetails = {
 
 export type VerificationView = PublicCertificateRecord & {
   onChainVerified: boolean;
+  chainMismatch?: boolean;
   blockchainDetails?: BlockchainCertificateDetails;
   bcError?: string;
 };

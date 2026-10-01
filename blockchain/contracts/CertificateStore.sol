@@ -55,7 +55,7 @@ contract CertificateStore {
         string memory _institution
     ) public onlyAuthorized returns (bytes32) {
         bytes32 certId = keccak256(abi.encodePacked(_certificateHash));
-        // Allow updating or re-issuing if needed, but for now we just store
+        require(!certificates[certId].isValid, "Certificate already issued");
         certificates[certId] = Certificate({
             studentName: _studentName,
             certificateHash: _certificateHash,

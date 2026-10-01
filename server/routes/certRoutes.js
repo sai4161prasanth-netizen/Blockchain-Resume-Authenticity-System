@@ -138,7 +138,7 @@ router.post('/verify', async (req, res) => {
   const certificate = await Certificate.findOne({ certHash: cleanHash, status: 'verified', blockchainTx: { $exists: true, $ne: '' } })
     .select('title institution issueDate certHash blockchainTx status isExternal')
     .populate('student', 'name')
-    .populate('issuedBy', 'name');
+    .populate('issuedBy', 'name walletAddress');
 
   if (certificate) {
     res.json({
