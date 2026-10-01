@@ -35,11 +35,18 @@ export type BlockchainCertificateDetails = {
   issuedBy: string;
 };
 
-export type VerificationView = PublicCertificateRecord & {
+export type VerificationView = {
+  title?: string;
+  institution?: string;
+  issueDate?: string;
+  certHash: string;
+  blockchainTx?: string;
+  student?: { name: string };
+  issuedBy?: { name: string; walletAddress?: string };
+  databaseStatus: "verified" | "not_verified" | "unavailable";
+  chainStatus: "verified" | "not_found" | "unavailable" | "mismatch";
   onChainVerified: boolean;
-  chainMismatch?: boolean;
   blockchainDetails?: BlockchainCertificateDetails;
-  bcError?: string;
 };
 
 export type CertificateVerifyResponse = {

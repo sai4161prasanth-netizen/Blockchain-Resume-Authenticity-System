@@ -134,7 +134,7 @@ router.post('/verify', async (req, res) => {
   const { hash } = req.body;
   if (typeof hash !== 'string' || !/^\s*[a-fA-F0-9]{64}\s*$/.test(hash)) return res.status(400).json({ valid: false, message: 'A valid SHA-256 hash is required' });
   
-  const cleanHash = hash.trim();
+  const cleanHash = hash.trim().toLowerCase();
   const certificate = await Certificate.findOne({ certHash: cleanHash, status: 'verified', blockchainTx: { $exists: true, $ne: '' } })
     .select('title institution issueDate certHash blockchainTx status isExternal')
     .populate('student', 'name')

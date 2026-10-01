@@ -18,7 +18,6 @@ import {
 import axios from "axios";
 import Link from "next/link";
 import type { CertificateVerifyResponse, VerificationView } from "@/types/certificate";
-import { getErrorMessage } from "@/lib/errors";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -37,7 +36,7 @@ export default function VerifyPage() {
     setError("");
     setUnverified(false);
 
-    const cleanHash = certHash.trim();
+    const cleanHash = certHash.trim().toLowerCase();
     if (cleanHash.length !== 64) {
       setError("A valid SHA-256 hash must be 64 characters long. Make sure you haven't copied a truncated value.");
       setLoading(false);
@@ -45,51 +44,60 @@ export default function VerifyPage() {
     }
 
     try {
-      // 1. Verify in Database
-      const { data } = await axios.post<CertificateVerifyResponse>(`${API_URL}/api/certs/verify`, { hash: cleanHash });
-      
-      if (!data.valid) {
-        setUnverified(true);
+      const [databaseLookup, chainLookup] = await Promise.allSettled([
+        axios.post<CertificateVerifyResponse>(`${API_URL}/api/certs/verify`, { hash: cleanHash }),
+        verifyCertificateOnChain(cleanHash)
+      ]);
+
+      const certificate = databaseLookup.status === "fulfilled" && databaseLookup.value.data.valid
+        ? databaseLookup.value.data.certificate
+        : undefined;
+      const databaseStatus = databaseLookup.status === "rejected" || (databaseLookup.status === "fulfilled" && databaseLookup.value.data.valid && !certificate)
+        ? "unavailable"
+        : certificate ? "verified" : "not_verified";
+
+      if (chainLookup.status === "rejected") {
+        if (certificate) {
+          console.warn("Blockchain verification failed; showing the database record only.", chainLookup.reason);
+          setResult({ ...certificate, certHash: cleanHash, databaseStatus, chainStatus: "unavailable", onChainVerified: false });
+        } else {
+          setError(databaseStatus === "unavailable"
+            ? "The app database and blockchain could not be checked. Try again when both services are available."
+            : "The app has no matching credential record, and the blockchain could not be checked.");
+        }
         return;
       }
-      if (!data.certificate) throw new Error("Verification response did not include a certificate record.");
-      const certificate = data.certificate;
 
-      // 2. Cross-verify on Blockchain
-      try {
-        const onChainData = await verifyCertificateOnChain(cleanHash);
-        const [isValid, studentName, institution, issueDate, issuedBy] = onChainData;
-
-        if (isValid) {
-          const institutionMatches = certificate.institution.trim().toLowerCase() === institution.trim().toLowerCase();
-          const walletMatches = certificate.issuedBy?.walletAddress?.toLowerCase() === issuedBy.toLowerCase();
-          setResult({
-            ...certificate,
-            onChainVerified: institutionMatches && walletMatches,
-            chainMismatch: !institutionMatches || !walletMatches,
-            blockchainDetails: {
-              studentName,
-              institution,
-              issueDate: Number(issueDate) * 1000,
-              issuedBy
-            }
-          });
+      const [isValid, studentName, institution, issueDate, issuedBy] = chainLookup.value;
+      if (!isValid) {
+        if (certificate) {
+          setResult({ ...certificate, certHash: cleanHash, databaseStatus, chainStatus: "not_found", onChainVerified: false });
+        } else if (databaseStatus === "unavailable") {
+          setError("No active blockchain record was found, and the app database could not be checked.");
         } else {
-          setResult({
-            ...certificate,
-            onChainVerified: false
-          });
+          setUnverified(true);
         }
-      } catch (bcError) {
-        console.warn("Blockchain verification failed, showing DB record only.", bcError);
-        setResult({
-          ...certificate,
-          onChainVerified: false,
-          bcError: "Could not connect to blockchain for verification."
-        });
+        return;
       }
+
+      const institutionMatches = !certificate || certificate.institution.trim().toLowerCase() === institution.trim().toLowerCase();
+      const walletMatches = !certificate || certificate.issuedBy?.walletAddress?.toLowerCase() === issuedBy.toLowerCase();
+      const matchesDatabase = institutionMatches && walletMatches;
+      setResult({
+        ...(certificate || {}),
+        certHash: cleanHash,
+        databaseStatus,
+        chainStatus: matchesDatabase ? "verified" : "mismatch",
+        onChainVerified: matchesDatabase,
+        blockchainDetails: {
+          studentName,
+          institution,
+          issueDate: Number(issueDate) * 1000,
+          issuedBy
+        }
+      });
     } catch (err: unknown) {
-      setError(getErrorMessage(err, "Verification failed"));
+      setError(err instanceof Error ? err.message : "Verification failed");
     } finally {
       setLoading(false);
     }
@@ -106,7 +114,7 @@ export default function VerifyPage() {
         <div className="text-center mb-12">
           <ShieldCheck className="w-16 h-16 text-blue-500 mx-auto mb-4" />
           <h1 className="text-4xl font-bold mb-4">Verify Credential</h1>
-          <p className="text-slate-400 text-lg">Enter the certificate hash to verify its authenticity on the blockchain.</p>
+          <p className="text-slate-400 text-lg">Check this hash against verified app records and the live blockchain.</p>
         </div>
 
         <form onSubmit={handleVerify} className="mb-12 relative">
@@ -136,7 +144,7 @@ export default function VerifyPage() {
             <XCircle className="w-20 h-20 text-red-500 mb-2" />
             <div className="text-center">
               <h3 className="font-black text-3xl mb-2">UNVERIFIED</h3>
-              <p className="text-slate-400 text-lg">This certificate hash does not exist in our secure records or blockchain.</p>
+              <p className="text-slate-400 text-lg">This hash did not match a verified app record or an active blockchain credential.</p>
               <p className="text-slate-500 text-sm mt-4 font-mono break-all opacity-50">{certHash.trim()}</p>
             </div>
           </div>
@@ -160,10 +168,10 @@ export default function VerifyPage() {
               {result.onChainVerified ? <CheckCircle2 className="w-10 h-10 text-emerald-500" /> : <AlertCircle className="w-10 h-10 text-amber-500" />}
               <div>
                 <h3 className={`font-black text-3xl ${result.onChainVerified ? "text-emerald-500" : "text-amber-500"}`}>
-                  {result.onChainVerified ? "VERIFIED ON-CHAIN" : result.chainMismatch ? "CHAIN RECORD MISMATCH" : "NOT VERIFIED ON-CHAIN"}
+                  {result.chainStatus === "verified" ? "VERIFIED ON-CHAIN" : result.chainStatus === "mismatch" ? "CHAIN RECORD MISMATCH" : result.chainStatus === "unavailable" ? "BLOCKCHAIN UNAVAILABLE" : "NOT FOUND ON-CHAIN"}
                 </h3>
                 <p className="text-slate-400">
-                  {result.onChainVerified ? "Hash, institution, and issuer wallet match the active blockchain record." : result.chainMismatch ? "The hash exists on-chain, but its institution or issuer wallet differs from the verified database record." : "A database record exists, but the blockchain did not confirm it."}
+                  {result.chainStatus === "mismatch" ? "The hash exists on-chain, but its institution or issuer wallet differs from the app record." : result.databaseStatus === "verified" && result.chainStatus === "verified" ? "Hash, institution, and issuer wallet match between the app and active blockchain record." : result.databaseStatus === "not_verified" && result.chainStatus === "verified" ? "An active blockchain record matches this hash; no verified app record matched it." : result.databaseStatus === "unavailable" && result.chainStatus === "verified" ? "The active blockchain record matches this hash; the app database could not be checked." : result.chainStatus === "unavailable" ? "The app record exists, but a live blockchain check could not be completed." : "The app record exists, but the blockchain has no active record for this hash."}
                 </p>
               </div>
             </div>
@@ -175,7 +183,7 @@ export default function VerifyPage() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-amber-400 font-bold bg-amber-500/10 px-4 py-2 rounded-full border border-amber-500/20">
-                  <AlertCircle className="w-5 h-5" /> {result.chainMismatch ? "Mismatch" : "Off-Chain Only"}
+                  <AlertCircle className="w-5 h-5" /> {result.chainStatus === "mismatch" ? "Mismatch" : result.chainStatus === "unavailable" ? "Chain unavailable" : "Off-Chain Only"}
                 </div>
               )}
             </div>
@@ -191,7 +199,7 @@ export default function VerifyPage() {
 
               <div className="flex-1 space-y-6">
                 <div>
-                  <h2 className="text-3xl font-bold mb-1">{result.title}</h2>
+                  <h2 className="text-3xl font-bold mb-1">{result.title || (result.databaseStatus === "unavailable" ? "On-chain credential (app record unavailable)" : "On-chain credential (no verified app record)")}</h2>
                   <p className="text-slate-400 font-mono text-sm break-all">{result.certHash}</p>
                 </div>
 
@@ -200,23 +208,23 @@ export default function VerifyPage() {
                     <UserCircle className="w-5 h-5 text-blue-400 mt-1" />
                     <div>
                       <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Student Name</p>
-                      <p className="text-lg font-medium">{result.student?.name || result.blockchainDetails?.studentName}</p>
+                      <p className="text-lg font-medium">{result.student?.name || (result.blockchainDetails?.studentName === "Credential holder" ? "Not disclosed on-chain" : result.blockchainDetails?.studentName) || "N/A"}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Building2 className="w-5 h-5 text-emerald-400 mt-1" />
                     <div>
                       <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Institution</p>
-                      <p className="text-lg font-medium">{result.institution}</p>
-                      {result.chainMismatch && result.blockchainDetails && <p className="text-xs text-amber-300 mt-1">On-chain institution: {result.blockchainDetails.institution}</p>}
+                      <p className="text-lg font-medium">{result.institution || result.blockchainDetails?.institution || "N/A"}</p>
+                      {result.chainStatus === "mismatch" && result.blockchainDetails && <p className="text-xs text-amber-300 mt-1">On-chain institution: {result.blockchainDetails.institution}</p>}
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Calendar className="w-5 h-5 text-purple-400 mt-1" />
                     <div>
-                      <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Issue Date</p>
+                      <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">{result.blockchainDetails ? "On-Chain Issue Date" : "App Record Date"}</p>
                       <p className="text-lg font-medium">
-                        {new Date(result.issueDate || result.blockchainDetails?.issueDate || 0).toLocaleDateString(undefined, {
+                        {new Date(result.blockchainDetails?.issueDate ?? result.issueDate ?? 0).toLocaleDateString(undefined, {
                           year: 'numeric', month: 'long', day: 'numeric'
                         })}
                       </p>
@@ -229,7 +237,7 @@ export default function VerifyPage() {
                       <p className="text-sm font-mono text-slate-300">
                         {result.issuedBy?.walletAddress || result.blockchainDetails?.issuedBy || 'N/A'}
                       </p>
-                      {result.chainMismatch && result.blockchainDetails && <p className="text-xs font-mono text-amber-300 mt-1 break-all">On-chain wallet: {result.blockchainDetails.issuedBy}</p>}
+                      {result.chainStatus === "mismatch" && result.blockchainDetails && <p className="text-xs font-mono text-amber-300 mt-1 break-all">On-chain wallet: {result.blockchainDetails.issuedBy}</p>}
                     </div>
                   </div>
                 </div>
