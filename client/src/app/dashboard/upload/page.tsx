@@ -275,10 +275,13 @@ export default function UploadPage() {
                     </label>
                   </div>
                 </div>
-                {file && <label className="mt-4 flex items-start gap-3 text-sm text-slate-300">
-                  <input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} className="mt-1" />
-                  <span>I have permission to send this uploaded document to OpenAI for preliminary AI screening. The AI may be wrong and cannot prove authenticity or fraud.</span>
-                </label>}
+                {file && <fieldset className="mt-4 rounded-xl border border-slate-700 p-4">
+                  <legend className="px-2 text-sm font-semibold text-slate-200">Optional AI screening</legend>
+                  <label htmlFor="ai-screening-consent" className="flex items-start gap-3 text-sm text-slate-300">
+                    <input id="ai-screening-consent" type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} className="mt-1" />
+                    <span>I confirm I have permission to send this document, which may contain personal information, to OpenAI for preliminary screening. The app saves the assessment summary with this credential. AI can flag possible inconsistencies but cannot prove authenticity or fraud.</span>
+                  </label>
+                </fieldset>}
               </>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
