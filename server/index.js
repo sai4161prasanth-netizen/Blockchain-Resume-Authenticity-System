@@ -13,9 +13,6 @@ if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET must be set before starting the API');
 }
 
-// Connect to database
-connectDB();
-
 // Middleware
 app.set('trust proxy', 1);
 const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:3000').split(',').map((origin) => origin.trim());
