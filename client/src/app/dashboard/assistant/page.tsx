@@ -90,7 +90,7 @@ export default function CredentialAssistantPage() {
           />
           <div className="flex justify-between items-center mt-3">
             <span className="text-xs text-slate-500">Only credential title, institution, date, and verification hashes are sent for this answer.</span>
-            <button type="button" disabled={busy || !question.trim()} className="flex items-center gap-2 bg-blue-600 disabled:opacity-50 hover:bg-blue-500 px-4 py-2 rounded-xl font-semibold">
+            <button type="submit" disabled={busy || !question.trim()} className="flex items-center gap-2 bg-blue-600 disabled:opacity-50 hover:bg-blue-500 px-4 py-2 rounded-xl font-semibold">
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               Ask
             </button>
