@@ -37,8 +37,8 @@ export default function VerifyPage() {
     setUnverified(false);
 
     const cleanHash = certHash.trim().toLowerCase();
-    if (cleanHash.length !== 64) {
-      setError("A valid SHA-256 hash must be 64 characters long. Make sure you haven't copied a truncated value.");
+    if (!/^[0-9a-f]{64}$/.test(cleanHash)) {
+      setError("A SHA-256 hash must contain exactly 64 hexadecimal characters.");
       setLoading(false);
       return;
     }
