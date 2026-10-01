@@ -1,0 +1,21 @@
+{
+  "name": "blockchain",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13 <23"
+  },
+  "scripts": {
+    "compile": "hardhat build",
+    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.1"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.2.0",
+    "hardhat": "^3.18.0"
+  }
+}
