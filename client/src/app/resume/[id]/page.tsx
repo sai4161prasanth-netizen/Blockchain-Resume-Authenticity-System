@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { 
   ShieldCheck, 
@@ -16,11 +16,14 @@ import axios from "axios";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 import { QRCodeSVG } from "qrcode.react";
+import type { CertificateRecord } from "@/types/certificate";
+
+type PublicStudent = { name: string };
 
 export default function ResumePage() {
   const { id } = useParams();
-  const [certs, setCerts] = useState([]);
-  const [student, setStudent] = useState<any>(null);
+  const [certs, setCerts] = useState<CertificateRecord[]>([]);
+  const [student, setStudent] = useState<PublicStudent | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -28,7 +31,7 @@ export default function ResumePage() {
 
   const fetchResume = useCallback(async () => {
     try {
-      const { data } = await axios.get(`${API_URL}/api/certs/public/student/${id}`);
+      const { data } = await axios.get<{ certificates: CertificateRecord[]; student: PublicStudent }>(`${API_URL}/api/certs/public/student/${id}`);
       setCerts(data.certificates);
       setStudent(data.student);
     } catch (error) {
@@ -132,7 +135,7 @@ export default function ResumePage() {
             </div>
 
             <div className="space-y-6">
-              {certs.length > 0 ? certs.map((cert: any) => (
+              {certs.length > 0 ? certs.map((cert) => (
                 <div key={cert._id} className="group p-6 rounded-2xl bg-slate-800/30 border border-slate-800 hover:border-blue-500/50 transition-all relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-4">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 opacity-50 group-hover:opacity-100 transition-opacity" />
@@ -169,7 +172,7 @@ export default function ResumePage() {
                         </div>
                       </div>
                       {cert.fileUrl && <button type="button" 
-                        onClick={() => handleDownload(cert.fileUrl, cert.title)}
+                        onClick={() => cert.fileUrl && handleDownload(cert.fileUrl, cert.title)}
                         className="p-2 text-slate-500 hover:text-blue-400 transition-all"
                         title="Download Certificate"
                       >

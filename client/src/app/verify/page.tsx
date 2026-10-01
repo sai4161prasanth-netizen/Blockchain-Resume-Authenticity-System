@@ -17,14 +17,16 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
+import type { CertificateVerifyResponse, VerificationView } from "@/types/certificate";
+import { getErrorMessage } from "@/lib/errors";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 export default function VerifyPage() {
-  const { verifyCertificateOnChain, isReady } = useBlockchain();
+  const { verifyCertificateOnChain } = useBlockchain();
   const [certHash, setCertHash] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<VerificationView | null>(null);
   const [error, setError] = useState("");
   const [unverified, setUnverified] = useState(false);
 
@@ -44,12 +46,14 @@ export default function VerifyPage() {
 
     try {
       // 1. Verify in Database
-      const { data } = await axios.post(`${API_URL}/api/certs/verify`, { hash: cleanHash });
+      const { data } = await axios.post<CertificateVerifyResponse>(`${API_URL}/api/certs/verify`, { hash: cleanHash });
       
       if (!data.valid) {
         setUnverified(true);
         return;
       }
+      if (!data.certificate) throw new Error("Verification response did not include a certificate record.");
+      const certificate = data.certificate;
 
       // 2. Cross-verify on Blockchain
       try {
@@ -58,7 +62,7 @@ export default function VerifyPage() {
 
         if (isValid) {
           setResult({
-            ...data.certificate,
+            ...certificate,
             onChainVerified: true,
             blockchainDetails: {
               studentName,
@@ -69,20 +73,20 @@ export default function VerifyPage() {
           });
         } else {
           setResult({
-            ...data.certificate,
+            ...certificate,
             onChainVerified: false
           });
         }
       } catch (bcError) {
         console.warn("Blockchain verification failed, showing DB record only.", bcError);
         setResult({
-          ...data.certificate,
+          ...certificate,
           onChainVerified: false,
           bcError: "Could not connect to blockchain for verification."
         });
       }
-    } catch (err: any) {
-      setError(err.message || "Verification failed");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Verification failed"));
     } finally {
       setLoading(false);
     }
@@ -208,7 +212,7 @@ export default function VerifyPage() {
                     <div>
                       <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Issue Date</p>
                       <p className="text-lg font-medium">
-                        {new Date(result.issueDate || result.blockchainDetails?.issueDate).toLocaleDateString(undefined, {
+                        {new Date(result.issueDate || result.blockchainDetails?.issueDate || 0).toLocaleDateString(undefined, {
                           year: 'numeric', month: 'long', day: 'numeric'
                         })}
                       </p>

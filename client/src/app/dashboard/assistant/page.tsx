@@ -5,6 +5,7 @@ import axios from "axios";
 import { ArrowLeft, Loader2, Send, Sparkles, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { getErrorMessage } from "@/lib/errors";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -17,6 +18,8 @@ type Source = {
   blockchainTx: string;
 };
 
+type AskResponse = { answer: string; sources: Source[] };
+
 export default function CredentialAssistantPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -27,7 +30,7 @@ export default function CredentialAssistantPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && (!user || user.role !== "student")) router.replace("/dashboard");
+    if (!authLoading && user?.role !== "student") router.replace("/dashboard");
   }, [authLoading, user, router]);
 
   const ask = async (event: FormEvent) => {
@@ -38,13 +41,13 @@ export default function CredentialAssistantPage() {
     setAnswer("");
     setSources([]);
     try {
-      const { data } = await axios.post(`${API_URL}/api/ai/ask`, { question }, {
+      const { data } = await axios.post<AskResponse>(`${API_URL}/api/ai/ask`, { question }, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setAnswer(data.answer);
       setSources(data.sources || []);
-    } catch (requestError: any) {
-      setError(requestError.response?.data?.message || "The assistant could not answer right now.");
+    } catch (requestError: unknown) {
+      setError(getErrorMessage(requestError, "The assistant could not answer right now."));
     } finally {
       setBusy(false);
     }

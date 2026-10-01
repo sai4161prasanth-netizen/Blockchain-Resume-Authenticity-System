@@ -3,12 +3,23 @@ import type React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { getErrorMessage } from "@/lib/errors";
+
+export type UserRole = "student" | "institution" | "employer" | "admin";
+
+export type RegistrationData = {
+  name: string;
+  email: string;
+  password: string;
+  role: Exclude<UserRole, "admin">;
+  walletAddress?: string;
+};
 
 interface User {
   _id: string;
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
   walletAddress?: string;
   token: string;
 }
@@ -17,7 +28,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: any) => Promise<void>;
+  register: (userData: RegistrationData) => Promise<void>;
   logout: () => void;
 }
 
@@ -39,23 +50,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      const { data } = await axios.post(`${API_URL}/api/auth/login`, { email, password });
+      const { data } = await axios.post<User>(`${API_URL}/api/auth/login`, { email, password });
       setUser(data);
       localStorage.setItem("user", JSON.stringify(data));
       router.push("/dashboard");
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Login failed");
+    } catch (error: unknown) {
+      throw new Error(getErrorMessage(error, "Login failed"));
     }
   };
 
-  const register = async (userData: any) => {
+  const register = async (userData: RegistrationData) => {
     try {
-      const { data } = await axios.post(`${API_URL}/api/auth/register`, userData);
+      const { data } = await axios.post<User>(`${API_URL}/api/auth/register`, userData);
       setUser(data);
       localStorage.setItem("user", JSON.stringify(data));
       router.push("/dashboard");
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Registration failed");
+    } catch (error: unknown) {
+      throw new Error(getErrorMessage(error, "Registration failed"));
     }
   };
 

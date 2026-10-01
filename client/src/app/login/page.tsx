@@ -2,11 +2,13 @@
 import type React from "react";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import type { RegistrationData } from "@/context/AuthContext";
+import { getErrorMessage } from "@/lib/errors";
 import { Lock, Mail, User, ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RegistrationData>({
     name: "",
     email: "",
     password: "",
@@ -24,8 +26,8 @@ export default function LoginPage() {
       } else {
         await register(formData);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Authentication failed"));
     }
   };
 
@@ -124,7 +126,7 @@ export default function LoginPage() {
                 id="account-type"
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value as RegistrationData["role"] })}
               >
                 <option value="student">Student</option>
                 <option value="institution">Institution / University</option>

@@ -18,6 +18,7 @@ import {
   Download
 } from "lucide-react";
 import axios from "axios";
+import type { CertificateRecord } from "@/types/certificate";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const BLOCK_EXPLORER_URL = process.env.NEXT_PUBLIC_BLOCK_EXPLORER_URL || "";
@@ -25,13 +26,13 @@ const BLOCK_EXPLORER_URL = process.env.NEXT_PUBLIC_BLOCK_EXPLORER_URL || "";
 export default function Dashboard() {
   const { user, logout, loading } = useAuth();
   const { account, connectWallet } = useBlockchain();
-  const [certs, setCerts] = useState([]);
+  const [certs, setCerts] = useState<CertificateRecord[]>([]);
   const router = useRouter();
 
   const fetchCerts = useCallback(async () => {
     if (!user) return;
     try {
-      const { data } = await axios.get(`${API_URL}/api/certs/my`, {
+      const { data } = await axios.get<CertificateRecord[]>(`${API_URL}/api/certs/my`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setCerts(data);
@@ -49,7 +50,7 @@ export default function Dashboard() {
     }
   }, [user, loading, router, fetchCerts]);
 
-  const downloadCertificate = async (cert: any) => {
+  const downloadCertificate = async (cert: CertificateRecord) => {
     try {
       const { data } = await axios.get(`${API_URL}/api/certs/${cert._id}/file`, {
         headers: { Authorization: `Bearer ${user?.token}` },
@@ -158,14 +159,14 @@ export default function Dashboard() {
               <span className="text-slate-400 text-sm font-medium">Verified On-Chain</span>
               <CheckCircle2 className="w-5 h-5 text-emerald-400" />
             </div>
-            <div className="text-2xl font-bold">{certs.filter((c: any) => c.status === 'verified').length}</div>
+            <div className="text-2xl font-bold">{certs.filter((certificate) => certificate.status === 'verified').length}</div>
           </div>
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
             <div className="flex items-center justify-between mb-4">
               <span className="text-slate-400 text-sm font-medium">Pending Approval</span>
               <Clock className="w-5 h-5 text-amber-400" />
             </div>
-            <div className="text-2xl font-bold">{certs.filter((c: any) => c.status === 'pending').length}</div>
+            <div className="text-2xl font-bold">{certs.filter((certificate) => certificate.status === 'pending').length}</div>
           </div>
         </div>
 
@@ -196,7 +197,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {certs.length > 0 ? certs.map((cert: any) => (
+                {certs.length > 0 ? certs.map((cert) => (
                   <tr key={cert._id} className="hover:bg-slate-800/30 transition-colors">
                     <td className="px-6 py-4 font-medium">{cert.title}</td>
                     <td className="px-6 py-4 text-slate-400">{cert.institution}</td>

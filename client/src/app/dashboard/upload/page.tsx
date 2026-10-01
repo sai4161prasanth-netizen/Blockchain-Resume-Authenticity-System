@@ -13,6 +13,11 @@ import {
   AlertCircle 
 } from "lucide-react";
 import axios from "axios";
+import type { AiScreening, CertificateRecord } from "@/types/certificate";
+import { getErrorMessage } from "@/lib/errors";
+
+type UploadResponse = CertificateRecord;
+type ScreeningResponse = { assessment: AiScreening };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -32,12 +37,12 @@ export default function UploadPage() {
   
   const [file, setFile] = useState<File | null>(null);
   const [aiConsent, setAiConsent] = useState(false);
-  const [aiScreening, setAiScreening] = useState<any>(null);
-  const [stagedCertificate, setStagedCertificate] = useState<any>(null);
+  const [aiScreening, setAiScreening] = useState<AiScreening | null>(null);
+  const [stagedCertificate, setStagedCertificate] = useState<CertificateRecord | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
 
-  const issueOnChain = async (cert: any, reviewAcknowledged = false) => {
+  const issueOnChain = async (cert: CertificateRecord, reviewAcknowledged = false) => {
     setStatus({ type: "info", message: "Recording certificate hash on blockchain... Please confirm in MetaMask." });
     const txHash = await issueCertificateOnChain("Credential holder", cert.certHash, formData.institution);
     await axios.put(`${API_URL}/api/certs/${cert._id}/blockchain`, {
@@ -55,10 +60,10 @@ export default function UploadPage() {
     if (!stagedCertificate) return;
     setLoading(true);
     try {
-      const reviewAcknowledged = ["review_required", "unavailable"].includes(aiScreening?.status);
+      const reviewAcknowledged = aiScreening?.status === "review_required" || aiScreening?.status === "unavailable";
       await issueOnChain(stagedCertificate, reviewAcknowledged);
-    } catch (error: any) {
-      setStatus({ type: "error", message: error.response?.data?.message || error.message || "Could not issue certificate" });
+    } catch (error: unknown) {
+      setStatus({ type: "error", message: getErrorMessage(error, "Could not issue certificate") });
     } finally {
       setLoading(false);
     }
@@ -78,7 +83,7 @@ export default function UploadPage() {
     setStatus({ type: "", message: "" });
     setAiScreening(null);
     setStagedCertificate(null);
-    let uploadedCertificate: any = null;
+    let uploadedCertificate: CertificateRecord | null = null;
 
     try {
       const data = new FormData();
@@ -93,7 +98,7 @@ export default function UploadPage() {
       }
 
       // 1. Upload to Backend
-      const response = await axios.post(`${API_URL}/api/certs/upload`, data, {
+      const response = await axios.post<UploadResponse>(`${API_URL}/api/certs/upload`, data, {
         headers: { 
           Authorization: `Bearer ${user?.token}`,
           "Content-Type": "multipart/form-data"
@@ -108,7 +113,7 @@ export default function UploadPage() {
       if (aiConsent && file && !formData.isExternal) {
         try {
           setStatus({ type: "info", message: "Sending the document for preliminary AI screening..." });
-          const { data: screenData } = await axios.post(`${API_URL}/api/ai/screen/${cert._id}`, { consent: true }, {
+          const { data: screenData } = await axios.post<ScreeningResponse>(`${API_URL}/api/ai/screen/${cert._id}`, { consent: true }, {
             headers: { Authorization: `Bearer ${user?.token}` }
           });
           setAiScreening(screenData.assessment);
@@ -117,12 +122,12 @@ export default function UploadPage() {
             setStatus({ type: "warning", message: "AI screening flagged items for human review. Read the findings below before choosing whether to issue." });
             return;
           }
-        } catch (screenError: any) {
+        } catch (screenError: unknown) {
           setAiScreening({
             status: "unavailable",
             summary: "Automated screening did not complete. Review the document manually.",
             observations: [],
-            limitations: [screenError.response?.data?.message || "No AI screening result is available."]
+            limitations: [getErrorMessage(screenError, "No AI screening result is available.")]
           });
           setStagedCertificate(cert);
           setStatus({ type: "warning", message: "AI screening is unavailable. Review the document manually before choosing whether to issue." });
@@ -131,10 +136,10 @@ export default function UploadPage() {
       }
 
       await issueOnChain(cert);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
       if (uploadedCertificate) setStagedCertificate(uploadedCertificate);
-      setStatus({ type: "error", message: error.response?.data?.message || error.message || "Failed to issue certificate" });
+      setStatus({ type: "error", message: getErrorMessage(error, "Failed to issue certificate") });
     } finally {
       setLoading(false);
     }
@@ -187,7 +192,7 @@ export default function UploadPage() {
           )}
 
           {stagedCertificate && <button type="button" onClick={continueAfterReview} disabled={loading} className="mb-8 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold px-4 py-2 rounded-xl">
-            {loading ? "Issuing..." : ["review_required", "unavailable"].includes(aiScreening?.status) ? "I reviewed this; record the institution’s issuance on-chain" : "Retry on-chain issuance"}
+            {loading ? "Issuing..." : aiScreening?.status === "review_required" || aiScreening?.status === "unavailable" ? "I reviewed this; record the institution’s issuance on-chain" : "Retry on-chain issuance"}
           </button>}
 
           {!account && (

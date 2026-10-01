@@ -2,13 +2,16 @@
 import type React from "react";
 import { createContext, useCallback, useContext, useState, useEffect } from "react";
 import { ethers } from "ethers";
+import { getWalletErrorMessage } from "@/lib/errors";
+
+type OnChainCertificate = readonly [boolean, string, string, bigint, string];
 
 interface BlockchainContextType {
   account: string | null;
   isReady: boolean;
   connectWallet: () => Promise<void>;
   issueCertificateOnChain: (studentName: string, certHash: string, institution: string) => Promise<string>;
-  verifyCertificateOnChain: (certHash: string) => Promise<any>;
+  verifyCertificateOnChain: (certHash: string) => Promise<OnChainCertificate>;
 }
 
 const BlockchainContext = createContext<BlockchainContextType | undefined>(undefined);
@@ -28,7 +31,8 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const checkConnection = useCallback(async () => {
     if (typeof window.ethereum !== "undefined") {
       try {
-        const accounts = await window.ethereum.request({ method: "eth_accounts" });
+        const response = await window.ethereum.request({ method: "eth_accounts" });
+        const accounts = Array.isArray(response) ? response.filter((item): item is string => typeof item === "string") : [];
         if (accounts.length > 0) {
           setAccount(accounts[0]);
         }
@@ -44,7 +48,10 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const provider = window.ethereum;
     if (!provider) return;
 
-    const handleAccountsChanged = (accounts: string[]) => setAccount(accounts[0] || null);
+    const handleAccountsChanged = (accounts: unknown) => {
+      const wallets = Array.isArray(accounts) ? accounts.filter((item): item is string => typeof item === "string") : [];
+      setAccount(wallets[0] || null);
+    };
     const handleChainChanged = () => window.location.reload();
     provider.on("accountsChanged", handleAccountsChanged);
     provider.on("chainChanged", handleChainChanged);
@@ -58,11 +65,13 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const connectWallet = async () => {
     if (typeof window.ethereum !== "undefined") {
       try {
-        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+        const response = await window.ethereum.request({ method: "eth_requestAccounts" });
+        const accounts = Array.isArray(response) ? response.filter((item): item is string => typeof item === "string") : [];
+        if (accounts.length === 0) throw new Error("Wallet returned no account.");
         setAccount(accounts[0]);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("User denied wallet access", error);
-        throw new Error(error.message || "Failed to connect wallet");
+        throw new Error(getWalletErrorMessage(error, "Failed to connect wallet"));
       }
     } else {
       alert("Please install MetaMask!");
@@ -93,9 +102,9 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const tx = await contract.issueCertificate(studentName, certHash, institution);
       await tx.wait();
       return tx.hash;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Blockchain transaction failed:", error);
-      throw new Error(error.reason || error.message || "Blockchain transaction failed");
+      throw new Error(getWalletErrorMessage(error, "Blockchain transaction failed"));
     }
   };
 
@@ -103,7 +112,7 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const contract = await getContract(false); // Use provider for verification
     if (!contract) throw new Error("Could not connect to blockchain");
     
-    return await contract.verifyCertificate(certHash);
+    return await contract.verifyCertificate(certHash) as OnChainCertificate;
   };
 
   return (
