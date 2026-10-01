@@ -54,6 +54,7 @@ contract CertificateStore {
         string memory _certificateHash,
         string memory _institution
     ) public onlyAuthorized returns (bytes32) {
+        require(_isCanonicalSha256(_certificateHash), "Hash must be lowercase SHA-256 hex");
         bytes32 certId = keccak256(abi.encodePacked(_certificateHash));
         require(!certificates[certId].isValid, "Certificate already issued");
         certificates[certId] = Certificate({
@@ -67,6 +68,19 @@ contract CertificateStore {
 
         emit CertificateIssued(certId, _studentName, _certificateHash, msg.sender);
         return certId;
+    }
+
+    function _isCanonicalSha256(string memory _value) private pure returns (bool) {
+        bytes memory valueBytes = bytes(_value);
+        if (valueBytes.length != 64) return false;
+
+        for (uint256 i = 0; i < valueBytes.length; i++) {
+            uint8 character = uint8(valueBytes[i]);
+            bool isDigit = character >= 48 && character <= 57;
+            bool isLowercaseHexLetter = character >= 97 && character <= 102;
+            if (!isDigit && !isLowercaseHexLetter) return false;
+        }
+        return true;
     }
 
     function verifyCertificate(string memory _certificateHash) public view returns (bool, string memory, string memory, uint256, address) {
