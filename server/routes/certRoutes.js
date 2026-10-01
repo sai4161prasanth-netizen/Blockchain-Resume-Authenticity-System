@@ -44,7 +44,7 @@ router.post('/upload', protect, authorize('institution', 'admin'), (req, res, ne
   }
   
   const student = await User.findOne({ email: studentEmail.trim().toLowerCase() });
-  if (!student) {
+  if (!student || student.role !== 'student') {
     return res.status(404).json({ message: 'Student not found' });
   }
 
