@@ -154,6 +154,7 @@ export default function UploadPage() {
             status: "unavailable",
             summary: "Automated screening did not complete. Review the document manually.",
             observations: [],
+            findings: [],
             limitations: [getErrorMessage(screenError, "No AI screening result is available.")]
           });
           setStagedCertificate(cert);
@@ -212,7 +213,19 @@ export default function UploadPage() {
             <section className={`mb-8 p-5 rounded-2xl border ${aiScreening.status === "review_required" || aiScreening.status === "unavailable" ? "border-amber-500/40 bg-amber-500/5" : "border-blue-500/30 bg-blue-500/5"}`}>
               <h2 className="font-bold mb-2">Preliminary AI document review</h2>
               <p className="text-sm text-slate-300 mb-3">{aiScreening.summary}</p>
-              {aiScreening.observations?.length > 0 && <ul className="list-disc pl-5 space-y-1 text-sm text-slate-300 mb-3">{aiScreening.observations.map((item: string) => <li key={item}>{item}</li>)}</ul>}
+              {aiScreening.findings?.length ? (
+                <ul className="space-y-3 text-sm text-slate-300 mb-3">
+                  {aiScreening.findings.map((finding) => (
+                    <li key={`${finding.location}-${finding.observation}-${finding.evidence}`} className="rounded-lg border border-slate-700 p-3">
+                      <p>{finding.observation}</p>
+                      <p className="mt-2 text-slate-400"><span className="font-semibold">Document evidence:</span> {finding.evidence}</p>
+                      <p className="mt-1 text-xs text-slate-500">Location: {finding.location} · Compared with: {finding.comparedWith}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : aiScreening.observations?.length ? (
+                <ul className="list-disc pl-5 space-y-1 text-sm text-slate-300 mb-3">{aiScreening.observations.map((item: string) => <li key={item}>{item}</li>)}</ul>
+              ) : null}
               {aiScreening.limitations?.length > 0 && <p className="text-xs text-slate-400">Limits: {aiScreening.limitations.join(" ")}</p>}
               <p className="text-xs text-amber-300 mt-3">This is not proof of authenticity or fraud. Confirm with the issuing institution using a trusted channel.</p>
             </section>

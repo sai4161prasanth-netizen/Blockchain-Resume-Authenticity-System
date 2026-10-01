@@ -16,10 +16,18 @@ export type CertificateRecord = {
 
 export type AiScreeningStatus = "not_run" | "no_obvious_issue" | "review_required" | "unavailable";
 
+export type AiScreeningFinding = {
+  observation: string;
+  evidence: string;
+  location: string;
+  comparedWith: 'title' | 'institution' | 'issueDate' | 'visual_consistency' | 'other';
+};
+
 export type AiScreening = {
   status: AiScreeningStatus;
   summary: string;
   observations: string[];
+  findings?: AiScreeningFinding[];
   limitations: string[];
 };
 

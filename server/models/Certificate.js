@@ -23,6 +23,13 @@ const certificateSchema = new mongoose.Schema({
     status: { type: String, enum: ['not_run', 'no_obvious_issue', 'review_required', 'unavailable'], default: 'not_run' },
     summary: { type: String },
     observations: [{ type: String }],
+    findings: [{
+      _id: false,
+      observation: { type: String },
+      evidence: { type: String },
+      location: { type: String },
+      comparedWith: { type: String, enum: ['title', 'institution', 'issueDate', 'visual_consistency', 'other'] }
+    }],
     limitations: [{ type: String }],
     model: { type: String },
     analyzedAt: { type: Date },
