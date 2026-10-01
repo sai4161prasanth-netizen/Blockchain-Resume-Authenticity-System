@@ -69,12 +69,12 @@ export default function CredentialAssistantPage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold">Credential Assistant</h1>
-            <p className="text-slate-400">Ask questions about your verified credentials.</p>
+            <p className="text-slate-400">Ask questions about your active, blockchain-verified credentials.</p>
           </div>
         </div>
 
         <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 text-sm text-slate-300 mb-6">
-          Answers use your verified credential records and cite them as [1], [2]. The assistant does not verify credentials or make hiring decisions.
+          Answers use credential records checked against the live blockchain and cite them as [1], [2]. The assistant does not verify documents or make hiring decisions.
         </div>
 
         <form onSubmit={ask} className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
@@ -89,7 +89,7 @@ export default function CredentialAssistantPage() {
             className="w-full resize-y bg-slate-800 border border-slate-700 rounded-xl p-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <div className="flex justify-between items-center mt-3">
-            <span className="text-xs text-slate-500">Only credential title, institution, date, and verification hashes are sent for this answer.</span>
+            <span className="text-xs text-slate-500">The assistant receives credential title, institution, date, document hash, and blockchain transaction hash. It does not receive your name, email, or uploaded files.</span>
             <button type="submit" disabled={busy || !question.trim()} className="flex items-center gap-2 bg-blue-600 disabled:opacity-50 hover:bg-blue-500 px-4 py-2 rounded-xl font-semibold">
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               Ask
