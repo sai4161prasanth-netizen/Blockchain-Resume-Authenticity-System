@@ -17,6 +17,8 @@ A credential management and verification platform that helps detect unauthorized
 
 Use Node.js 22.13 or later in the Node 22 line for local work and hosting builds. The root and service folders include `.nvmrc` files; their package manifests also declare the supported Node range.
 
+The `.github/workflows/ci.yml` workflow runs dependency audits, client lint/build, server syntax checks, and a contract build on pushes to `main` and pull requests.
+
 ### Configuration
 Copy each `.env.example` to `.env` in the matching `server`, `client`, and `blockchain` folders and fill in the values. Never commit real `.env` files, API keys, RPC URLs with secrets, or wallet private keys.
 
