@@ -1,6 +1,6 @@
 "use client";
 import type React from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useBlockchain } from "@/context/BlockchainContext";
 import { useRouter } from "next/navigation";
@@ -39,21 +39,40 @@ export default function UploadPage() {
   const [aiConsent, setAiConsent] = useState(false);
   const [aiScreening, setAiScreening] = useState<AiScreening | null>(null);
   const [stagedCertificate, setStagedCertificate] = useState<CertificateRecord | null>(null);
+  const [pendingTxHash, setPendingTxHash] = useState<string | null>(null);
+  const pendingTxHashRef = useRef<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
 
-  const issueOnChain = async (cert: CertificateRecord, reviewAcknowledged = false) => {
-    setStatus({ type: "info", message: "Recording certificate hash on blockchain... Please confirm in MetaMask." });
-    const txHash = await issueCertificateOnChain("Credential holder", cert.certHash, formData.institution);
+  const recordIssuedCertificate = async (cert: CertificateRecord, txHash: string, reviewAcknowledged = false) => {
     await axios.put(`${API_URL}/api/certs/${cert._id}/blockchain`, {
       txHash,
       reviewAcknowledged
     }, {
       headers: { Authorization: `Bearer ${user?.token}` }
     });
+    pendingTxHashRef.current = null;
+    setPendingTxHash(null);
     setStagedCertificate(null);
     setStatus({ type: "success", message: "Institution issuance recorded and transaction verified on-chain." });
     setTimeout(() => router.push("/dashboard"), 3000);
+  };
+
+  const issueOnChain = async (cert: CertificateRecord, reviewAcknowledged = false) => {
+    setStatus({ type: "info", message: "Recording certificate hash on blockchain... Please confirm in MetaMask." });
+    const txHash = await issueCertificateOnChain("Credential holder", cert.certHash, formData.institution);
+    pendingTxHashRef.current = txHash;
+    setPendingTxHash(txHash);
+    setStatus({ type: "info", message: "Blockchain transaction confirmed. Saving the verified issuance record..." });
+    await recordIssuedCertificate(cert, txHash, reviewAcknowledged);
+  };
+
+  const getIssuanceErrorMessage = (error: unknown) => {
+    const message = getErrorMessage(error, "Could not issue certificate");
+    const confirmedTxHash = pendingTxHashRef.current;
+    return confirmedTxHash
+      ? `Transaction ${confirmedTxHash} is confirmed on-chain, but the app could not finish saving it. Retry saving this transaction. ${message}`
+      : message;
   };
 
   const continueAfterReview = async () => {
@@ -61,9 +80,13 @@ export default function UploadPage() {
     setLoading(true);
     try {
       const reviewAcknowledged = aiScreening?.status === "review_required" || aiScreening?.status === "unavailable";
-      await issueOnChain(stagedCertificate, reviewAcknowledged);
+      if (pendingTxHashRef.current) {
+        await recordIssuedCertificate(stagedCertificate, pendingTxHashRef.current, reviewAcknowledged);
+      } else {
+        await issueOnChain(stagedCertificate, reviewAcknowledged);
+      }
     } catch (error: unknown) {
-      setStatus({ type: "error", message: getErrorMessage(error, "Could not issue certificate") });
+      setStatus({ type: "error", message: getIssuanceErrorMessage(error) });
     } finally {
       setLoading(false);
     }
@@ -71,6 +94,10 @@ export default function UploadPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (pendingTxHashRef.current) {
+      setStatus({ type: "error", message: "A confirmed transaction still needs to be saved. Use the retry button above before starting another issuance." });
+      return;
+    }
     if (!account) {
       setStatus({ type: "error", message: "Connect your institution wallet before uploading a certificate." });
       return;
@@ -139,7 +166,7 @@ export default function UploadPage() {
     } catch (error: unknown) {
       console.error(error);
       if (uploadedCertificate) setStagedCertificate(uploadedCertificate);
-      setStatus({ type: "error", message: getErrorMessage(error, "Failed to issue certificate") });
+      setStatus({ type: "error", message: getIssuanceErrorMessage(error) });
     } finally {
       setLoading(false);
     }
@@ -192,7 +219,7 @@ export default function UploadPage() {
           )}
 
           {stagedCertificate && <button type="button" onClick={continueAfterReview} disabled={loading} className="mb-8 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold px-4 py-2 rounded-xl">
-            {loading ? "Issuing..." : aiScreening?.status === "review_required" || aiScreening?.status === "unavailable" ? "I reviewed this; record the institution’s issuance on-chain" : "Retry on-chain issuance"}
+            {loading ? "Issuing..." : pendingTxHash ? "Retry saving confirmed transaction" : aiScreening?.status === "review_required" || aiScreening?.status === "unavailable" ? "I reviewed this; record the institution’s issuance on-chain" : "Retry on-chain issuance"}
           </button>}
 
           {!account && (
