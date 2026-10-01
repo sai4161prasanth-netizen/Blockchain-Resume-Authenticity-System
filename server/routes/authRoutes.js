@@ -3,6 +3,22 @@ const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { isAddress } = require('ethers');
+const { rateLimit } = require('express-rate-limit');
+
+const registrationLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { message: 'Too many registration attempts. Please try again later.' }
+});
+const loginLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { message: 'Too many login attempts. Please try again later.' }
+});
 
 // Generate JWT
 const generateToken = (id) => {
@@ -11,7 +27,7 @@ const generateToken = (id) => {
 
 // @desc    Register a new user
 // @route   POST /api/auth/register
-router.post('/register', async (req, res) => {
+router.post('/register', registrationLimit, async (req, res) => {
   const { name, email, password, role = 'student', walletAddress } = req.body;
   if (typeof name !== 'string' || !name.trim() || typeof email !== 'string' || !/^\S+@\S+\.\S+$/.test(email) || typeof password !== 'string' || password.length < 8) {
     return res.status(400).json({ message: 'Name, valid email, and password (at least 8 characters) are required' });
@@ -55,7 +71,7 @@ router.post('/register', async (req, res) => {
 
 // @desc    Auth user & get token
 // @route   POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimit, async (req, res) => {
   const { email, password } = req.body;
   if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
     return res.status(400).json({ message: 'Email and password are required' });
